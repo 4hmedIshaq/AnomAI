@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-def load_logs(file_name="siem_ueba_log_git.csv"):
+def load_logs(file_name="siem_ueba_log_small.csv"):
 
     base_dir =os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.join(base_dir,"..")
@@ -21,6 +21,3 @@ def load_logs(file_name="siem_ueba_log_git.csv"):
 
 if __name__ == "__main__":
     load_logs()
-
-
-

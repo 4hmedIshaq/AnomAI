@@ -1,164 +1,183 @@
 import duckdb
 
 # connect to DuckDB file
-con = duckdb.connect("../data/logs.duckdb")
+connection = duckdb.connect("../data/logs.duckdb")
 
 # Example rule: Failed logins (Event ID 4625 for Windows)
-rule_failed_logins = """
-SELECT *
-FROM logs
-WHERE Content LIKE '%4625%'
-OR Content LIKE '%Failed password%'
-"""
-results = con.execute(rule_failed_logins).fetchdf()
+def failed_logins(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE Content LIKE '%4625%'
+    OR Content LIKE '%Failed password%'
+    """
+    return connection.execute(query).fetchdf()
 
+failed_logins_results = failed_logins(connection)
 print("Failed login attempts:")
-print(results.head())   # show first 10 rows
+print(failed_logins_results)   # show first 10 rows
+
 
 # Count total failed logins
-rule_failed_count = """
-SELECT COUNT(*) AS failed_attempts
-FROM logs
-WHERE Content LIKE '%4625%'
-"""
-count_result = con.execute(rule_failed_count).fetchdf()
-print("Total failed login attempts:", count_result.iloc[0,0])
+def failed_count(connection):
+    query = """
+    SELECT COUNT(*) AS failed_attempts
+    FROM logs
+    WHERE Content LIKE '%4625%'
+    """
+    return connection.execute(query).fetchdf()
+
+failed_login_count = failed_count(connection)
+print("Total failed login attempts:", failed_login_count.iloc[0, 0])
 
 
 # Count failed logins per source IP
-
-rule_failed_by_ip = """
-SELECT src_ip, COUNT(*) AS attempts
-FROM logs
-WHERE Content LIKE '%4625%'
-GROUP BY src_ip
-ORDER BY attempts DESC
-"""
-ip_result = con.execute(rule_failed_by_ip).fetchdf()
-print("Failed login attempts by source IP:")
-print(ip_result.head(10))
-
-row_count = con.execute("SELECT COUNT(*) FROM LOGS").fetchone()[0]
-print(f"Total rows in logs table: {row_count}")
-
-
-
 def failed_logins_by_ip(connection):
     query = """
     SELECT src_ip, COUNT(*) AS attempts
     FROM logs
-    WHERE Content LIKE '%4625%' OR Content LIKE '%Failed password%'
+    WHERE Content LIKE '%4625%'
     GROUP BY src_ip
     ORDER BY attempts DESC
     """
     return connection.execute(query).fetchdf()
 
+failed_by_ip_results = failed_logins_by_ip(connection)
+print("Failed login attempts by source IP:")
+print(failed_by_ip_results.head(10))
 
 
-def total_failed_logins(connection):
+# Count total rows in logs table
+row_count = connection.execute("SELECT COUNT(*) FROM logs").fetchone()[0]
+print("Total rows in logs table:", row_count)
+
+
+# Brute force detection (many failed logins before a success)
+def brute_force_candidates(connection):
     query = """
-    SELECT COUNT(*) AS total_failed
-    FROM logs
-    WHERE Content LIKE '%4625%' OR Content LIKE '%Failed password%'
+    SELECT f.src_ip, f.entity_id, COUNT(*) AS failed_attempts
+    FROM logs f
+    JOIN logs s
+      ON f.src_ip = s.src_ip
+     AND f.entity_id = s.entity_id
+    WHERE (f.Content LIKE '%4625%' OR f.Content LIKE '%Failed password%')
+      AND (s.Content LIKE '%4624%' OR s.Content LIKE '%Accepted password%')
+    GROUP BY f.src_ip, f.entity_id
+    HAVING COUNT(*) > 3
+    ORDER BY failed_attempts DESC
     """
     return connection.execute(query).fetchdf()
 
-
-#Brute force detection (many failed logins before a success)
-rule_brute_force = """
-SELECT f.src_ip, f.entity_id, COUNT(*) AS failed_attempts
-FROM logs f
-JOIN logs s
-  ON f.src_ip = s.src_ip
- AND f.entity_id = s.entity_id
-WHERE (f.Content LIKE '%4625%' OR f.Content LIKE '%Failed password%')
-  AND (s.Content LIKE '%4624%' OR s.Content LIKE '%Accepted password%')
-GROUP BY f.src_ip, f.entity_id
-HAVING COUNT(*) > 3
-ORDER BY failed_attempts DESC
-"""
-brute_force = con.execute(rule_brute_force).fetchdf()
+brute_force_results = brute_force_candidates(connection)
 print("Brute force candidates:")
-print(brute_force.head(10))
+print(brute_force_results.head(10))
 
-#Privilege escalation
-rule_privilege_escalation = """
-SELECT *
-FROM logs
-WHERE (AGENT_NAME = 'WINDOWS_AGENT' AND Content LIKE '%4672%')
-   OR (AGENT_NAME = 'UBUNTU_AGENT' AND Content LIKE '%sudo%')
-   OR (AGENT_NAME = 'UBUNTU_AGENT' AND Content LIKE '%pam_unix(cron:session): session opened for user root%')
-"""
-priv_escalations = con.execute(rule_privilege_escalation).fetchdf()
+
+# Privilege escalation
+def privilege_escalations(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE (AGENT_NAME = 'WINDOWS_AGENT' AND Content LIKE '%4672%')
+       OR (AGENT_NAME = 'UBUNTU_AGENT' AND Content LIKE '%sudo%')
+       OR (AGENT_NAME = 'UBUNTU_AGENT' AND Content LIKE '%pam_unix(cron:session): session opened for user root%')
+    """
+    return connection.execute(query).fetchdf()
+
+priv_escalations_results = privilege_escalations(connection)
 print("Privilege escalation events:")
-print(priv_escalations.head(10))
+print(priv_escalations_results.head(10))
 
-#Account lockouts (for Windows)
-rule_account_lockouts = """
-SELECT *
-FROM logs
-WHERE AGENT_NAME = 'WINDOWS_AGENT'
-  AND Content LIKE '%4740%'
-"""
-lockouts = con.execute(rule_account_lockouts).fetchdf()
+
+# Account lockouts (for Windows)
+def account_lockouts(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE AGENT_NAME = 'WINDOWS_AGENT'
+      AND Content LIKE '%4740%'
+    """
+    return connection.execute(query).fetchdf()
+
+lockout_results = account_lockouts(connection)
 print("Account lockout events:")
-print(lockouts.head(10))
+print(lockout_results.head(10))
 
-#Log clearing/tampering
-rule_log_cleared = """
-SELECT *
-FROM logs
-WHERE (AGENT_NAME = 'WINDOWS_AGENT' AND Content LIKE '%1102%')
-   OR (AGENT_NAME = 'UBUNTU_AGENT' AND Content LIKE '%log cleared%')
-"""
-log_clears = con.execute(rule_log_cleared).fetchdf()
+
+# Log clearing/tampering
+def log_cleared(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE (AGENT_NAME = 'WINDOWS_AGENT' AND Content LIKE '%1102%')
+       OR (AGENT_NAME = 'UBUNTU_AGENT' AND Content LIKE '%log cleared%')
+    """
+    return connection.execute(query).fetchdf()
+
+log_clears_results = log_cleared(connection)
 print("Log clearing events:")
-print(log_clears.head(10))
+print(log_clears_results.head(10))
 
-#Suspicious new processes (Linux)
-rule_suspicious_Linux_process = """
-SELECT *
-FROM logs
-WHERE AGENT_NAME = 'UBUNTU_AGENT'
-  AND Content LIKE '%exec%'
-  AND (Content LIKE '%python%' OR Content LIKE '%nc%' OR Content LIKE '%bash%')
-"""
-suspicious_processes_linux = con.execute(rule_suspicious_Linux_process).fetchdf()
+
+# Suspicious new processes (Linux)
+def suspicious_linux_process(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE AGENT_NAME = 'UBUNTU_AGENT'
+      AND Content LIKE '%exec%'
+      AND (Content LIKE '%python%' OR Content LIKE '%nc%' OR Content LIKE '%bash%')
+    """
+    return connection.execute(query).fetchdf()
+
+suspicious_linux_results = suspicious_linux_process(connection)
 print("Suspicious new processes (Linux):")
-print(suspicious_processes_linux.head(10))
+print(suspicious_linux_results.head(10))
 
-#Suspicious new processes (Windows)
-rule_suspicious_Windows_process = """
-SELECT *
-FROM logs
-WHERE AGENT_NAME = 'WINDOWS_AGENT'
-  AND Content LIKE '%4688%'
-  AND (Content LIKE '%powershell%' OR Content LIKE '%cmd.exe%' OR Content LIKE '%wscript.exe%' OR Content LIKE '%cscript.exe%')
-"""
-suspicious_processes_win = con.execute(rule_suspicious_Windows_process).fetchdf()
+
+# Suspicious new processes (Windows)
+def suspicious_windows_process(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE AGENT_NAME = 'WINDOWS_AGENT'
+      AND Content LIKE '%4688%'
+      AND (Content LIKE '%powershell%' OR Content LIKE '%cmd.exe%' OR Content LIKE '%wscript.exe%' OR Content LIKE '%cscript.exe%')
+    """
+    return connection.execute(query).fetchdf()
+
+suspicious_win_results = suspicious_windows_process(connection)
 print("Suspicious new processes (Windows):")
-print(suspicious_processes_win.head(10))
+print(suspicious_win_results.head(10))
 
-#Windows remote login events (RDP)
-rule_rdp_logins = """
-SELECT *
-FROM logs
-WHERE AGENT_NAME = 'WINDOWS_AGENT'
-  AND Content LIKE '%4624%'
-  AND Content LIKE '%Logon Type: 10%'
-"""
-rdp_logins = con.execute(rule_rdp_logins).fetchdf()
+
+# Windows remote login events (RDP)
+def rdp_logins(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE AGENT_NAME = 'WINDOWS_AGENT'
+      AND Content LIKE '%4624%'
+      AND Content LIKE '%Logon Type: 10%'
+    """
+    return connection.execute(query).fetchdf()
+
+rdp_logins_results = rdp_logins(connection)
 print("RDP login events:")
-print(rdp_logins.head(10))
+print(rdp_logins_results.head(10))
 
-#Linux SSH Root logins
-rule_ssh_root_logins = """
-SELECT *
-FROM logs
-WHERE AGENT_NAME = 'UBUNTU_AGENT'
-  AND Content LIKE '%sshd%'
-  AND Content LIKE '%root%'
-"""
-ssh_root_logins = con.execute(rule_ssh_root_logins).fetchdf()
+
+# Linux SSH Root logins
+def ssh_root_logins(connection):
+    query = """
+    SELECT *
+    FROM logs
+    WHERE AGENT_NAME = 'UBUNTU_AGENT'
+      AND Content LIKE '%sshd%'
+      AND Content LIKE '%root%'
+    """
+    return connection.execute(query).fetchdf()
+
+ssh_root_logins_results = ssh_root_logins(connection)
 print("Linux SSH Root login events:")
-print(ssh_root_logins.head(10))
+print(ssh_root_logins_results.head(10))
