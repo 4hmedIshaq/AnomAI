@@ -1,25 +1,27 @@
 import duckdb
+import pandas as pd
+from typing import Dict, Tuple
 
 # connect to DuckDB file
 connection = duckdb.connect("../data/logs.duckdb")
 
-# Example rule: Failed logins (Event ID 4625 for Windows)
+# Failed logins
 def failed_logins(connection):
     query = """
     SELECT *
-    FROM logs
-    WHERE Content LIKE '%4625%'
-    OR Content LIKE '%Failed password%'
+    FROM logs 
+    WHERE Content LIKE '%4625%'          --Windows failed login
+    OR Content LIKE '%Failed password%'  --Linux Failed authentication
     """
     return connection.execute(query).fetchdf()
 
-failed_logins_results = failed_logins(connection)
-print("Failed login attempts:")
-print(failed_logins_results)   # show first 10 rows
+#failed_logins_results = failed_logins(connection)
+#print("Failed login attempts:")
+#print(failed_logins_results)   # show first 10 rows
 
 
-# Count total failed logins
-def failed_count(connection):
+# Count total failed logins on windoes with %4625$
+def failed_count_windows(connection):
     query = """
     SELECT COUNT(*) AS failed_attempts
     FROM logs
@@ -27,8 +29,8 @@ def failed_count(connection):
     """
     return connection.execute(query).fetchdf()
 
-failed_login_count = failed_count(connection)
-print("Total failed login attempts:", failed_login_count.iloc[0, 0])
+#failed_login_count = failed_count_windows(connection)
+#print("Total failed login attempts:", failed_login_count.iloc[0, 0])
 
 
 # Count failed logins per source IP
@@ -42,14 +44,14 @@ def failed_logins_by_ip(connection):
     """
     return connection.execute(query).fetchdf()
 
-failed_by_ip_results = failed_logins_by_ip(connection)
-print("Failed login attempts by source IP:")
-print(failed_by_ip_results.head(10))
+#failed_by_ip_results = failed_logins_by_ip(connection)
+#print("Failed login attempts by source IP:")
+#print(failed_by_ip_results.head(10))
 
 
 # Count total rows in logs table
-row_count = connection.execute("SELECT COUNT(*) FROM logs").fetchone()[0]
-print("Total rows in logs table:", row_count)
+#row_count = connection.execute("SELECT COUNT(*) FROM logs").fetchone()[0]
+#print("Total rows in logs table:", row_count)
 
 
 # Brute force detection (many failed logins before a success)
@@ -68,9 +70,9 @@ def brute_force_candidates(connection):
     """
     return connection.execute(query).fetchdf()
 
-brute_force_results = brute_force_candidates(connection)
-print("Brute force candidates:")
-print(brute_force_results.head(10))
+#brute_force_results = brute_force_candidates(connection)
+#print("Brute force candidates:")
+#print(brute_force_results.head(10))
 
 
 # Privilege escalation
@@ -84,9 +86,9 @@ def privilege_escalations(connection):
     """
     return connection.execute(query).fetchdf()
 
-priv_escalations_results = privilege_escalations(connection)
-print("Privilege escalation events:")
-print(priv_escalations_results.head(10))
+#priv_escalations_results = privilege_escalations(connection)
+#print("Privilege escalation events:")
+#print(priv_escalations_results.head(10))
 
 
 # Account lockouts (for Windows)
@@ -99,9 +101,9 @@ def account_lockouts(connection):
     """
     return connection.execute(query).fetchdf()
 
-lockout_results = account_lockouts(connection)
-print("Account lockout events:")
-print(lockout_results.head(10))
+#lockout_results = account_lockouts(connection)
+#print("Account lockout events:")
+#print(lockout_results.head(10))
 
 
 # Log clearing/tampering
@@ -114,9 +116,9 @@ def log_cleared(connection):
     """
     return connection.execute(query).fetchdf()
 
-log_clears_results = log_cleared(connection)
-print("Log clearing events:")
-print(log_clears_results.head(10))
+#log_clears_results = log_cleared(connection)
+#print("Log clearing events:")
+#print(log_clears_results.head(10))
 
 
 # Suspicious new processes (Linux)
@@ -130,9 +132,9 @@ def suspicious_linux_process(connection):
     """
     return connection.execute(query).fetchdf()
 
-suspicious_linux_results = suspicious_linux_process(connection)
-print("Suspicious new processes (Linux):")
-print(suspicious_linux_results.head(10))
+#suspicious_linux_results = suspicious_linux_process(connection)
+#print("Suspicious new processes (Linux):")
+#print(suspicious_linux_results.head(10))
 
 
 # Suspicious new processes (Windows)
@@ -146,9 +148,9 @@ def suspicious_windows_process(connection):
     """
     return connection.execute(query).fetchdf()
 
-suspicious_win_results = suspicious_windows_process(connection)
-print("Suspicious new processes (Windows):")
-print(suspicious_win_results.head(10))
+#suspicious_win_results = suspicious_windows_process(connection)
+#print("Suspicious new processes (Windows):")
+#print(suspicious_win_results.head(10))
 
 
 # Windows remote login events (RDP)
@@ -162,9 +164,9 @@ def rdp_logins(connection):
     """
     return connection.execute(query).fetchdf()
 
-rdp_logins_results = rdp_logins(connection)
-print("RDP login events:")
-print(rdp_logins_results.head(10))
+#rdp_logins_results = rdp_logins(connection)
+#print("RDP login events:")
+#print(rdp_logins_results.head(10))
 
 
 # Linux SSH Root logins
@@ -178,6 +180,8 @@ def ssh_root_logins(connection):
     """
     return connection.execute(query).fetchdf()
 
-ssh_root_logins_results = ssh_root_logins(connection)
-print("Linux SSH Root login events:")
-print(ssh_root_logins_results.head(10))
+#ssh_root_logins_results = ssh_root_logins(connection)
+#print("Linux SSH Root login events:")
+#print(ssh_root_logins_results.head(10))
+
+
