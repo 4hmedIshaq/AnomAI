@@ -63,9 +63,8 @@ def run_openrouter_analysis(prompt, api_key=None, model="gpt-4o-mini", temperatu
     return response["choices"][0]["message"]["content"]
 
 
-# ============================================================
+
 # Local LLaMA Version (Offline Inference)
-# ============================================================
 
 def run_local_llama(prompt, model_path, temperature=0.5, max_tokens=700):
     """
@@ -108,7 +107,7 @@ def analyze_logs(prompt, mode="openrouter", **kwargs):
     """
     try:
         if mode == "openrouter":
-            print("🔹 Using OpenRouter mode...")
+            print("---- Using OpenRouter mode...")
             result = run_openrouter_analysis(
                 prompt=prompt,
                 api_key=kwargs.get("api_key"),
@@ -118,7 +117,7 @@ def analyze_logs(prompt, mode="openrouter", **kwargs):
             )
             # fallback to local if OpenRouter fails
             if "Error" in str(result) and kwargs.get("model_path"):
-                print("⚠️ OpenRouter failed, switching to local model...")
+                print(" OpenRouter failed, switching to local model...")
                 return run_local_llama(
                     prompt=prompt,
                     model_path=kwargs.get("model_path"),
@@ -128,7 +127,7 @@ def analyze_logs(prompt, mode="openrouter", **kwargs):
             return result
 
         elif mode == "local":
-            print("🔹 Using Local LLaMA mode...")
+            print("---- Using Local LLaMA mode...")
             result = run_local_llama(
                 prompt=prompt,
                 model_path=kwargs.get("model_path"),
@@ -137,7 +136,7 @@ def analyze_logs(prompt, mode="openrouter", **kwargs):
             )
             # fallback to OpenRouter if local model fails
             if "Error" in str(result) and os.getenv("OPENROUTER_API_KEY"):
-                print("⚠️ Local model missing, switching to OpenRouter...")
+                print(" Local model missing, switching to OpenRouter...")
                 return run_openrouter_analysis(
                     prompt=prompt,
                     api_key=kwargs.get("api_key"),
