@@ -32,3 +32,5 @@ data/siem_ueba_log_small.csv
 
 # Ignore DuckDB databases
 data/*.duckdb
+
+

@@ -1,9 +1,18 @@
+import os
 import duckdb
 import pandas as pd
 from typing import Dict, Tuple
 
-# connect to DuckDB file
-connection = duckdb.connect("../data/logs.duckdb")
+base_dir = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(base_dir, "../data/logs.duckdb")
+
+
+# Normalize path (handles .. cleanly)
+db_path = os.path.normpath(db_path)
+
+# Connect to the databse
+connection = duckdb.connect(db_path)
+print(f" Connected to database: {db_path}")
 
 # Failed logins
 def failed_logins(connection):

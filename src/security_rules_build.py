@@ -1,11 +1,12 @@
-from security_rules import *
+# can also use .security_rules import * as a relative import meaning saying that its from the same package so take it from this package i am in. 
+from src.security_rules import *  
 import duckdb
 import pandas as pd
 from typing import Dict, Tuple
 
 
 # connect to DuckDB file
-connection = duckdb.connect("../data/logs.duckdb")
+connection = duckdb.connect(db_path)
 
 # Run all the rules and store it in a dictionary. 
 def combined_rules(connection) -> Dict[str, pd.DataFrame]:
@@ -102,7 +103,7 @@ def build_llm_context(results, examples=2):
 
 
 import pandas as pd
-from security_rules import (
+from src.security_rules import (
     failed_logins,
     failed_logins_by_ip,
     brute_force_candidates,

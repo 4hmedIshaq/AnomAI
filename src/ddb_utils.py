@@ -10,14 +10,16 @@ db_path = os.path.join(os.path.dirname(__file__), "..", "data", "logs.duckdb")
 # Making sure that folder exists
 os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-connection = duckdb.connect("../data/logs.duckdb")
+def save_logs_to_duckdb():
+    df = load_logs()
+    df_clean = clean_logs(df)
 
-df= load_logs()
-df_clean= clean_logs(df)
+    # Open and close connection inside the function (prevents locking)
+    with duckdb.connect(db_path) as con:
+        con.register("logs_df", df_clean)
+        con.execute("CREATE OR REPLACE TABLE logs AS SELECT * FROM logs_df")
 
-#register dataframe
-connection.register("logs_df", df_clean)
-#save data as table in duckdb
-connection.execute("CREATE OR REPLACE TABLE logs AS SELECT * FROM logs_df")
+    print("✅ Logs saved into DuckDB successfully")
 
-print("Logs saved into DuckDb successfully")
+if __name__ == "__main__":
+    save_logs_to_duckdb()
