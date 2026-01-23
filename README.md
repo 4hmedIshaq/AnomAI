@@ -19,12 +19,16 @@ The project simulates how modern SOCs blend traditional SIEM rules with AI-assis
 
 ![Architecture Diagram](./images/architecture.png)
 
-1. Logs are ingested and stored in DuckDB
-   - Raw Security logs are loaded and  
-3. Security rules query logs to detect suspicious activity
-4. Detection results are passed to an LLM
-5. The LLM generates analyst-style explanations and recommendations
-6. Results are accessible via notebooks or API/UI
+1. **Log Ingestion**
+   - Raw security logs are loaded and stored in DuckDB
+2. **Rule-Based Detection**
+   - SQL-based security rules analyze logs
+3. **Detection Aggregation**
+   - Findings are summarized
+4. **AI Reasoning Layer**
+   - LLM generates analyst-style explanations
+5. **Output**
+   - Results viewed via notebooks or API
 
 ---
 
