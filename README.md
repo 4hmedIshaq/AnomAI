@@ -1,70 +1,140 @@
-Mini-SOC Log Analysis Project
+# AnomAI — AI-Assisted Security Log Analysis & Threat Detection
 
-This project processes raw logs, cleans them, and stores them in a DuckDB database for analysis. Security detection rules are written in security_rules.py and can be executed via a Python script or a Jupyter notebook.
+AnomAI is a mini Security Operations Center (SOC) analytics system that combines rule-based security detections with Large Language Model (LLM) reasoning to analyze system logs, detect suspicious behavior, and generate human-readable security insights.
 
+The project simulates how modern SOCs blend traditional SIEM rules with AI-assisted analysis, using open-source tools and local data.
+---
 
+## Key Features
 
-- Workflow
+- Rule-based security detections (failed logins, brute force, privilege escalation, etc.)
+- Centralized log storage using DuckDB
+- AI-powered explanations using LLMs (Local LLaMA or OpenRouter)
+- Notebook-based analysis and API-based access
+- Modular and extensible architecture
 
-Load & Clean Logs
+---
 
-Run load_data.py and preprocess.py together via ddb_utils.py.
+## How It Works
 
-This will save logs into data/logs.duckdb.
+![Architecture Diagram](./images/architecture.png)
 
-    cd src
-    python ddb_utils.py
+1. Logs are ingested and stored in DuckDB
+   - Raw Security logs are loaded and  
+3. Security rules query logs to detect suspicious activity
+4. Detection results are passed to an LLM
+5. The LLM generates analyst-style explanations and recommendations
+6. Results are accessible via notebooks or API/UI
 
+---
 
-Expected output:
+## Project Structure
 
-    Loading logs from: ../data/siem_ueba_log_git.csv
-    Rows: XXXXX
-    Logs saved into DuckDb successfull
+```text
+AnomAI/
+├── api/                # FastAPI backend and UI
+├── src/
+│   ├── security_rules.py
+│   ├── preprocess.py
+│   └── llm_handler.py
+├── notebooks/          # Analysis notebooks
+├── data/               # DuckDB database
+└── README.md
+```
+---
 
+##  Security Rules Implemented
 
-Security Rules
+All rules are implemented in **`src/security_rules.py`** as reusable functions.
 
-All rules live in security_rules.py.
+### Included Detections
 
-Each rule is a function that:
+- ❌ Failed login attempts
+- 🔁 Brute-force attacks
+- 🔐 Privilege escalation
+- 🔒 Account lockouts
+- 🧹 Log clearing / tampering
+- ⚙️ Suspicious process execution
+- 🌐 RDP login activity
+- 🔑 SSH root logins
 
-Accepts a DuckDB connection.
+Each rule:
+- Uses SQL queries on DuckDB
+- Returns pandas DataFrames
+- Can be reused by notebooks, APIs, or automation
 
-Runs a SQL query against the logs table.
+---
 
-Returns the result as a pandas DataFrame.
+## AI-Powered Analysis
 
-Example rule (security_rules.py):
+AnomAI uses an **LLM reasoning layer** to convert raw detections into **SOC analyst-style explanations**.
 
-    def failed_logins(connection):
-        query = """
-        SELECT entity_id, COUNT(*) AS attempts
-        FROM logs
-        WHERE Content LIKE '%failed%'
-        GROUP BY entity_id
-        HAVING attempts > 5
-        """
-        return connection.execute(query).fetchdf()
+### What the AI Does
 
+- Summarizes detected security events
+- Explains why activity is suspicious
+- Identifies attack patterns
+- Suggests investigation steps
 
+![LLM Output](./images/LLM_Output.png)
 
+### Supported LLM Options
 
-How to Run Rules
-Option 1: Run via Script (test.py)
+- **Local LLaMA (llama-cpp)** — fully offline
+- **OpenRouter models** — fast inference, free-tier support
 
-Inside test.py you can import and run rules:
+> The LLM is used only for **analysis and explanation**, not training.
 
-import duckdb
-from security_rules import failed_logins
+---
 
-    if __name__ == "__main__":
-        connection = duckdb.connect("../data/logs.duckdb")
+##  Running the Analysis (Notebook)
 
-        print("Failed login attempts:")
-        print(failed_logins(connection))
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+```jupyter notebook
+Run notebooks:
+analysis.ipynb → security rules
+llm_analysis.ipynb → AI explanations
+```
 
-Run it from terminal:
+Running the API (Optional)
 
-    cd src
-    python test.py
+Start the backend API:
+```
+uvicorn api.api:app --reload --port 8001
+```
+
+Open:
+
+http://127.0.0.1:8001/docs for Swagger UI
+
+---
+
+**Technologies Used**
+- Python
+- DuckDB
+- pandas
+- SQL
+- FastAPI
+- Jupyter Notebook
+- llama-cpp-python
+- OpenRouter API
+- Hugging Face Hub
+
+## Project Ownership
+
+| Contributor | Responsibilities |
+|------------|------------------|
+| [**Ishaq Ahmed**](https://github.com/4ahmedIshaq) | Architecture, LLM integration, API design | 
+| [**Evan Mcnaughton**](https://github.com/Evan7252) | Data ingestion, detection rules, evaluation |
+
+---
+## **Disclaimer**
+
+This project is for educational and research purposes only.
+Not intended for production SOC environments.
+
+Logs Source from Kaggle: [CAC_DA_SIEM_UEBA_ba_V2](https://www.kaggle.com/datasets/teddylegessemunea/cac-da-siem-ueba-ba-v2)
+
